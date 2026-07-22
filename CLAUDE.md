@@ -23,6 +23,29 @@ mantenerse estable y bien versionado.
 
 ---
 
+## Estado actual
+
+> **Este archivo (y el `README`) son la "memoria" del repo: mantenlos actualizados
+> según avanza el proyecto.** Si cambia el estado, las decisiones o el flujo de
+> trabajo, actualiza aquí antes de dar una tarea por cerrada.
+
+- **Repositorio**: `github.com/Rural-Code-Labs/ommadawn-api` (organización
+  *Rural-Code-Labs*, no la cuenta personal). Carpeta local: `~/development/python/ommadawn-api`.
+- **Nombre**: proyecto / carpeta / repo van con **guion** (`ommadawn-api`); el **paquete
+  Python importable es `app`** (Python no admite guion en un `import`). No existe
+  `ommadawn_api` en el código, solo aparecía en prosa.
+- **Progreso**: **Fases 1–4 (bloque de auth) cerradas** ✅. Siguiente: **Fase 5 —
+  Discografía** (ver tabla de fases más abajo). El módulo `discography/` aún no existe.
+- **Base de datos en desarrollo = PostgreSQL local en Docker** (`docker compose up -d`),
+  el mismo motor que en producción. SQLite queda como alternativa rápida (línea comentada
+  en `.env` / `.env.example`).
+- **El esquema lo gestiona SIEMPRE Alembic** (dev y prod igual): la app **no** crea tablas
+  al arrancar. `migrations/env.py` lee la `DATABASE_URL` de `Settings` (una sola fuente) e
+  importa `Base.metadata`; **al añadir un módulo nuevo hay que importar sus `models` en
+  `env.py`** o `autogenerate` no verá sus tablas.
+
+---
+
 ## Stack
 
 | Tecnología | Función |
@@ -34,8 +57,8 @@ mantenerse estable y bien versionado.
 | Pydantic v2 + pydantic-settings | Schemas de API y configuración vía `.env` |
 | argon2-cffi | Hashing de contraseñas (argon2id) |
 | PyJWT | Access / refresh tokens |
-| SQLite (aiosqlite) | Base de datos en **desarrollo** |
-| PostgreSQL (asyncpg) | Base de datos en **producción** |
+| PostgreSQL (asyncpg) | Base de datos en **desarrollo** (Docker) y **producción** |
+| SQLite (aiosqlite) | Alternativa rápida en local (sin instalar nada) |
 | pytest + pytest-asyncio + httpx | Tests de integración |
 
 El objetivo es que pasar de dev a producción sea **solo cambiar `DATABASE_URL`** en `.env`,
@@ -74,10 +97,10 @@ un cambio incompatible implica una nueva versión (`/api/v2`), no romper la exis
 
 ---
 
-## Estructura prevista
+## Estructura del proyecto
 
-> El repositorio está **vacío** todavía. Esta es la estructura objetivo hacia la que
-> construir (patrón inspirado en `identity_service`, adaptado a monolito modular).
+> Estado real del repo. Los módulos marcados como *(futuro)* aún no existen; se
+> crearán en su fase (patrón inspirado en `identity_service`, monolito modular).
 
 ```
 ommadawn-api/
@@ -86,20 +109,22 @@ ommadawn-api/
 │   ├── core/
 │   │   ├── config.py           # Settings vía pydantic-settings (.env)
 │   │   ├── database.py         # Engine async, sesión, Base ORM, dependencia get_session
-│   │   ├── security.py         # argon2, PyJWT, helpers de hashing
+│   │   ├── security.py         # argon2 (hashing) + PyJWT + refresh tokens
 │   │   └── exceptions.py       # HTTPExceptions reutilizables
 │   └── modules/
-│       ├── auth/               # Fases 2-4 (modelo, tokens, endpoints)
-│       │   ├── models.py
-│       │   ├── schemas.py
-│       │   ├── service.py
+│       ├── auth/               # ✅ Fases 2-4 (bloque cerrado)
+│       │   ├── models.py       # User, RefreshToken
+│       │   ├── schemas.py      # Contratos Pydantic (request/response)
+│       │   ├── service.py      # Lógica: registro, login, tokens, rotación
+│       │   ├── dependencies.py # get_current_user (protege endpoints)
 │       │   └── router.py       # /api/v1/auth/*
-│       ├── discography/        # Fase 5 (futuro)
+│       ├── discography/        # ⏭️ Fase 5 (aún no creado)
 │       └── concerts/           # Fase 6 (futuro)
-├── migrations/                 # Alembic (env.py async, versions/)
-├── tests/                      # Tests de integración por módulo
-├── .env.example
+├── migrations/                 # Alembic: env.py (async) + versions/
+├── tests/                      # Tests de integración por módulo (conftest.py, test_auth.py)
+├── docker-compose.yml          # PostgreSQL local para desarrollo
 ├── alembic.ini
+├── .env.example
 └── pyproject.toml
 ```
 
@@ -107,13 +132,13 @@ ommadawn-api/
 
 ## Comandos
 
-> Aún no existe código; estos son los comandos objetivo del stack elegido.
-
 ```bash
 # Entorno e instalación
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
+# NOTA: el .venv guarda rutas absolutas. Si mueves/renombras la carpeta del
+# proyecto, el venv queda roto -> recréalo (rm -rf .venv && ...) y reinstala.
 
 # Configuración
 cp .env.example .env
