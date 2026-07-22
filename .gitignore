@@ -1,0 +1,21 @@
+# Entorno virtual
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Configuracion local y secretos (NUNCA commitear)
+.env
+
+# Base de datos local de desarrollo
+*.db
+
+# macOS
+.DS_Store
+
+# Claude Code (configuración local de la máquina)
+.claude/settings.local.json
